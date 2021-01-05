@@ -13,80 +13,26 @@ import {
   mapTo,
 } from 'rxjs/operators';
 
-const config = {
-  tickerStep: 20, // ms
-  controls: {
-    37: -1, // left arrow key code 37
-    39: 1, // right arrow key code 39
-  },
-  ball: {
-    radius: 5,
-    dX: 4, // initial speed X
-    dY: 4, // initial speed Y
-  },
-  paddle: {
-    width: 50,
-    height: 10,
-    speed: 10,
-  },
-  bricks: {
-    rows: 5,
-    columns: 8,
-    width: 48,
-    height: 5,
-    gap: 2,
-    topMargin: 40,
-  },
-};
+import {
+  canvas,
+  config,
+} from './setup';
+import {
+  clearCanvas,
+  renderPaddle,
+  renderBall,
+  renderBricks,
+} from './render';
+import {
+  paddleHit,
+  leftBoundHit,
+  rightBoundHit,
+  ceilingHit,
+  floorHit,
+  brickHit,
+} from './collisions';
 
-// RENDER
-// GAME AREA
-const canvas = document.querySelector('canvas');
-const ctx = canvas.getContext('2d');
-canvas.width = config.bricks.columns * (config.bricks.width + config.bricks.gap) + config.bricks.gap;
-canvas.height = canvas.width * 0.66;
-
-// GAME ELEMENTS
-const clearCanvas = () => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-};
-
-const drawPaddle = (xPos) => {
-  ctx.beginPath();
-  ctx.rect(
-    xPos - (config.paddle.width / 2),
-    canvas.height - config.paddle.height,
-    config.paddle.width,
-    config.paddle.height,
-  );
-  ctx.fill();
-  ctx.closePath();
-};
-
-const drawBall = (ball) => {
-  ctx.beginPath();
-  ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.closePath();
-};
-
-const drawBrick = (brick) => {
-  ctx.beginPath();
-  ctx.rect(
-    brick.x - brick.width / 2,
-    brick.y - brick.height / 2,
-    brick.width,
-    brick.height,
-  );
-  ctx.fill();
-  ctx.closePath();
-};
-
-const drawBricks = (bricks) => {
-  bricks.forEach((brick) => drawBrick(brick));
-};
-
-// SETUP
+// Initialise game elements
 const newBrickWall = (rows, columns, width, height, gap) => {
   const bricks = [];
   for (let i = 0; i < rows; i++) {
@@ -102,7 +48,6 @@ const newBrickWall = (rows, columns, width, height, gap) => {
   return bricks;
 };
 
-// Starting values for game elements
 const newGameElements = () => ({
   bricks: newBrickWall(
     config.bricks.rows,
@@ -120,7 +65,7 @@ const newGameElements = () => ({
   },
 });
 
-// MOVE BALL AND CHECK COLLISIONS
+// The step function moves the ball and checks collisions
 const step = (bricks, ball, ticker, paddleX) => {
   // Move ball
   const ballNext = {
@@ -142,7 +87,7 @@ const step = (bricks, ball, ticker, paddleX) => {
     ballNext.y = ballNext.radius;
     ballNext.dY = -ballNext.dY;
   }
-  if (floorHit(ballNext)) { // GAME OVER
+  if (floorHit(ballNext)) { // Game over
     gameOver('loser.');
     ballNext.y = canvas.height - ballNext.radius;
     ballNext.dY = -ballNext.dY;
@@ -154,7 +99,7 @@ const step = (bricks, ball, ticker, paddleX) => {
     ballNext.dY = -ballNext.dY;
   }
 
-  // Check brick collisions and remove impacted bricks
+  // Brick collisions and removal of impacted bricks
   const hitBrick = bricks.filter((brick) => brickHit(ballNext, brick));
   const remainingBricks = bricks.filter((brick) => !brickHit(ballNext, brick));
   if (hitBrick.length) {
@@ -163,7 +108,8 @@ const step = (bricks, ball, ticker, paddleX) => {
       : hitBrick[0].y + (hitBrick[0].height / 2);
     ballNext.dY = -ballNext.dY;
   }
-  if (remainingBricks.length < 1) {
+
+  if (remainingBricks.length < 1) { // Game won
     gameOver('well done');
   }
 
@@ -175,10 +121,12 @@ const step = (bricks, ball, ticker, paddleX) => {
   };
 };
 
-// TICKER
+/* RxJS Stuff */
+
+// Ticker stream
 const ticker$ = interval(config.tickerStep, animationFrameScheduler);
 
-// USER INPUT && PADDLE
+// User input and paddle streams
 const keyDown$ = fromEvent(document, 'keydown').pipe(map((event) => config.controls[event.keyCode] || 0));
 const keyUp$ = fromEvent(document, 'keyup').pipe(mapTo(0));
 const user$ = merge(keyDown$, keyUp$);
@@ -202,33 +150,13 @@ const elements$ = ticker$.pipe(
     newGameElements()),
 );
 
-// COLLISION DETECTION
-const paddleHit = (ball, paddleX) => (
-  ball.y + ball.radius > canvas.height - config.paddle.height
-  && ball.x > paddleX - (config.paddle.width / 2)
-  && ball.x < paddleX + (config.paddle.width / 2)
-);
-
-const leftBoundHit = (ball) => ball.x < ball.radius;
-const rightBoundHit = (ball) => ball.x > canvas.width - ball.radius;
-const ceilingHit = (ball) => ball.y < ball.radius;
-const floorHit = (ball) => ball.y > (canvas.height - ball.radius);
-
-const brickHit = (ball, brick) => (
-  ball.x + ball.dX > brick.x - (brick.width / 2)
-  && ball.x + ball.dX < brick.x + (brick.width / 2)
-  && ball.y + ball.dY > brick.y - (brick.height / 2)
-  && ball.y + ball.dY < brick.y + brick.height / 2
-);
-
-// UPDATE
-
+// Observer
 const update = {
   next: ([paddleX, elements]) => {
     clearCanvas();
-    drawPaddle(paddleX);
-    drawBall(elements.ball);
-    drawBricks(elements.bricks);
+    renderPaddle(paddleX);
+    renderBall(elements.ball);
+    renderBricks(elements.bricks);
   },
 };
 
