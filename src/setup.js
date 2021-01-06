@@ -28,5 +28,6 @@ const config = {
 const canvas = document.querySelector('canvas');
 canvas.width = config.bricks.columns * (config.bricks.width + config.bricks.gap) + config.bricks.gap;
 canvas.height = canvas.width * 0.66;
+document.getElementById('stage').style.width = `${canvas.width}px`;
 
 export { canvas, config };
