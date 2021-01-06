@@ -2,7 +2,6 @@ import { canvas, config } from './setup';
 
 const ctx = canvas.getContext('2d');
 
-// GAME ELEMENTS
 const clearCanvas = () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 };

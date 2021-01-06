@@ -24,7 +24,7 @@ const config = {
   },
 };
 
-// GAME AREA
+// Game area
 const canvas = document.querySelector('canvas');
 canvas.width = config.bricks.columns * (config.bricks.width + config.bricks.gap) + config.bricks.gap;
 canvas.height = canvas.width * 0.66;

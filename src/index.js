@@ -3,7 +3,6 @@ import {
   interval,
   animationFrameScheduler,
   merge,
-  combineLatest,
 } from 'rxjs';
 import {
   scan,
@@ -32,7 +31,7 @@ import {
   brickHit,
 } from './collisions';
 
-// Initialise game elements
+// Generate initial game elements
 const newBrickWall = (rows, columns, width, height, gap) => {
   const bricks = [];
   for (let i = 0; i < rows; i++) {
@@ -58,10 +57,10 @@ const newGameElements = () => ({
   ),
   ball: {
     radius: config.ball.radius,
-    x: canvas.width / 2,
-    y: canvas.height / 2,
     dX: config.ball.dX,
     dY: config.ball.dY,
+    x: canvas.width / 2,
+    y: canvas.height / 2,
   },
 });
 
@@ -133,7 +132,7 @@ const user$ = merge(keyDown$, keyUp$);
 
 const paddleX$ = ticker$.pipe(
   withLatestFrom(user$),
-  scan((xPosition, [_, direction]) => {
+  scan((xPosition, [ticker, direction]) => {
     const nextXPosition = xPosition + (config.paddle.speed * direction);
     return nextXPosition > canvas.width
       ? canvas.width
@@ -144,6 +143,7 @@ const paddleX$ = ticker$.pipe(
   distinctUntilChanged(),
 );
 
+// Stream with all game elements
 const elements$ = ticker$.pipe(
   withLatestFrom(paddleX$),
   scan(({ bricks, ball }, [ticker, paddleX]) => step(bricks, ball, ticker, paddleX),
@@ -152,15 +152,15 @@ const elements$ = ticker$.pipe(
 
 // Observer
 const update = {
-  next: ([paddleX, elements]) => {
+  next: (elements) => {
     clearCanvas();
-    renderPaddle(paddleX);
+    renderPaddle(elements.paddleX);
     renderBall(elements.ball);
     renderBricks(elements.bricks);
   },
 };
 
-const run = combineLatest([paddleX$, elements$]).subscribe(update);
+const run = elements$.subscribe(update);
 
 const gameOver = (message) => {
   alert(message);
