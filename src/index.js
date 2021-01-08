@@ -87,9 +87,9 @@ const step = (bricks, ball, ticker, paddleX) => {
     ballNext.dY = -ballNext.dY;
   }
   if (floorHit(ballNext)) { // Game over
-    gameOver('loser.');
     ballNext.y = canvas.height - ballNext.radius;
     ballNext.dY = -ballNext.dY;
+    gameOver('loser.');
   }
 
   // Paddle collision
